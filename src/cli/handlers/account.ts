@@ -35,6 +35,7 @@ import {
   withInteractiveLoginCleanup
 } from './interactive-login-interruption'
 import { getWslAccountTarget } from './account-wsl-location'
+import { ACCOUNT_BRIDGE_HANDLERS } from './account-bridge'
 
 // Why: add returns just that provider's state; list returns the full snapshot.
 type AccountsListSnapshot = {
@@ -299,6 +300,7 @@ async function assertAccountImportSupported({ client }: HandlerContext): Promise
 
 /** CLI handlers for `orca account add [--agent claude|codex]` and `orca account list`. */
 export const ACCOUNT_HANDLERS: Record<string, CommandHandler> = {
+  ...ACCOUNT_BRIDGE_HANDLERS,
   'account add': async (ctx) => {
     const agentFlag = ctx.flags.get('agent')
     // Why: a valueless `--agent` parses as boolean true; defaulting it to claude

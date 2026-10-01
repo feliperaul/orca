@@ -43,6 +43,7 @@ export class CodexAccountSelection {
     const settings = this.dependencies.store.getSettings()
     return {
       accounts: settings.codexManagedAccounts
+        .filter((account) => !account.externalCredentialSource?.retired)
         .map(toCodexManagedAccountSummary)
         .sort((a, b) => b.updatedAt - a.updatedAt),
       activeAccountId: normalizeCodexRuntimeSelection(settings).host,
@@ -55,7 +56,7 @@ export class CodexAccountSelection {
     const account = this.dependencies.store
       .getSettings()
       .codexManagedAccounts.find((entry) => entry.id === accountId)
-    if (!account) {
+    if (!account || account.externalCredentialSource?.retired) {
       throw new Error('That Codex rate limit account no longer exists.')
     }
     return account

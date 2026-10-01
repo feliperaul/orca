@@ -1,3 +1,4 @@
+import { assertExternalAccountCommandAllowed } from '../../../external-account-refresh-reservation'
 import {
   isTerminalLeafId,
   makePaneKey,
@@ -23,6 +24,7 @@ import { assemblePtyIpcSpawnCodexEnv } from './spawn-env-codex'
 
 export async function assemblePtyIpcSpawnEnv(ctx: PtyIpcSpawnState): Promise<void> {
   const args = ctx.args
+  assertExternalAccountCommandAllowed(ctx.args.command, ctx.args.connectionId)
   if (ctx.isClaudeLaunch && isClaudeAuthSwitchInProgress()) {
     throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
   }
@@ -143,4 +145,5 @@ export async function assemblePtyIpcSpawnEnv(ctx: PtyIpcSpawnState): Promise<voi
   ctx.validatedLeafId = ctx.verifiedLeafId ?? ctx.metadataLeafId
   ctx.spawnTiming.mark('pane_env')
   await assemblePtyIpcSpawnCodexEnv(ctx)
+  assertExternalAccountCommandAllowed(ctx.args.command, ctx.args.connectionId)
 }

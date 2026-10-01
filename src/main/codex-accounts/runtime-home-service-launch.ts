@@ -1,3 +1,4 @@
+import { assertExternalAccountLaunchAllowed } from '../external-account-refresh-reservation'
 import { resolveHostCodexSessionSourceHome } from '../codex/codex-session-source-home'
 import { startSystemCodexSessionBridgeInBackground } from '../codex/codex-session-bridge'
 import {
@@ -42,6 +43,7 @@ export abstract class CodexRuntimeHomeLaunch extends CodexRuntimeHomeRouting {
     launchEnv?: NodeJS.ProcessEnv,
     options?: { unavailableManagedHomePath?: string }
   ): string | null {
+    assertExternalAccountLaunchAllowed('codex')
     if (target?.runtime === 'wsl') {
       const wslTarget = this.resolveWslDefaultTarget(target)
       const homePath = this.getWslCodexHomePathForSelection(wslTarget)
@@ -116,6 +118,7 @@ export abstract class CodexRuntimeHomeLaunch extends CodexRuntimeHomeRouting {
     launchEnv?: NodeJS.ProcessEnv,
     options?: { unavailableManagedHomePath?: string }
   ): Promise<string | null> {
+    assertExternalAccountLaunchAllowed('codex')
     if (target?.runtime !== 'wsl') {
       return this.prepareForCodexLaunch(target, launchEnv, options)
     }

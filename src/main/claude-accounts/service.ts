@@ -1,4 +1,10 @@
+import { assertExternalAccountLaunchAllowed } from '../external-account-refresh-reservation'
 import type { ClaudeRateLimitAccountsState } from '../../shared/managed-account-types'
+import type {
+  ExternalAccountStorageRequest,
+  ExternalAccountBridgeResult
+} from '../../shared/external-account-bridge'
+import { ClaudeExternalAccountBridge } from './claude-external-account-bridge'
 import type { Store } from '../persistence'
 import type { RateLimitService } from '../rate-limits/service'
 import { ClaudeAccountRegistration } from './claude-account-registration'
@@ -37,6 +43,7 @@ export class ClaudeAccountService {
   private readonly storage = new ClaudeManagedAuthStorage()
   private readonly selection: ClaudeAccountSelection
   private readonly registration: ClaudeAccountRegistration
+  private readonly externalBridge: ClaudeExternalAccountBridge
 
   constructor(
     store: Store,
@@ -45,6 +52,12 @@ export class ClaudeAccountService {
   ) {
     this.selection = new ClaudeAccountSelection(store, rateLimits, runtimeAuth, (accountId, path) =>
       this.safeRemoveManagedAuth(accountId, path)
+    )
+    this.externalBridge = new ClaudeExternalAccountBridge(
+      store,
+      this.storage,
+      runtimeAuth,
+      this.selection
     )
     this.registration = new ClaudeAccountRegistration({
       store,
@@ -75,7 +88,12 @@ export class ClaudeAccountService {
     return this.selection.list()
   }
 
+  bridgeAccount(request: ExternalAccountStorageRequest): Promise<ExternalAccountBridgeResult> {
+    return this.serializeMutation(() => this.externalBridge.handle(request))
+  }
+
   async addAccount(target?: ClaudeAccountAddTarget): Promise<ClaudeRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('claude')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.registration.add(target))
   }
@@ -88,16 +106,19 @@ export class ClaudeAccountService {
   }
 
   async reauthenticateAccount(accountId: string): Promise<ClaudeRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('claude')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.registration.reauthenticate(accountId))
   }
 
   async removeAccount(accountId: string): Promise<ClaudeRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('claude')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.remove(accountId))
   }
 
   async selectAccount(accountId: string | null): Promise<ClaudeRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('claude')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId))
   }
@@ -106,6 +127,7 @@ export class ClaudeAccountService {
     accountId: string | null,
     target?: ClaudeAccountSelectionTarget
   ): Promise<ClaudeRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('claude')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId, target))
   }

@@ -14,6 +14,24 @@ function method(name: string) {
 }
 
 describe('account RPC methods', () => {
+  it('keeps all bridge operations local to the host socket', async () => {
+    const bridge = vi.fn().mockResolvedValue({ status: 'ok' })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this isolated handler only invokes the one mocked runtime method.
+    const runtime = { bridgeAccount: bridge } as unknown as OrcaRuntimeService
+    const handler = method('accounts.bridge')
+    if (isStreamingMethod(handler)) {
+      throw new Error('bridge must be a request method')
+    }
+    const request = { operation: 'read', agent: 'claude', key: 'origin:lease' }
+    for (const clientKind of ['mobile', 'runtime'] as const) {
+      await expect(handler.handler(request, { runtime, clientKind })).rejects.toThrow(
+        /local Orca host socket/
+      )
+    }
+    expect(bridge).not.toHaveBeenCalled()
+    await handler.handler(request, { runtime })
+    expect(bridge).toHaveBeenCalledWith(request)
+  })
   it.each([
     {
       methodName: 'accounts.addClaudeFromConfigDir',

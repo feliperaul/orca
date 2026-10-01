@@ -67,6 +67,7 @@ export class ClaudeRuntimeAuthPreparationService extends ClaudeRuntimeAuthSnapsh
     return {
       configDir: paths.configDir,
       runtime: 'host',
+      externallyManaged: Boolean(activeAccount?.externalCredentialSource),
       wslDistro: null,
       wslLinuxConfigDir: null,
       envPatch: paths.envPatch,

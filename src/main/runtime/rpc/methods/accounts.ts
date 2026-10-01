@@ -1,4 +1,5 @@
 import { defineMethod, defineStreamingMethod } from '../core'
+import { ExternalAccountBridgeParams } from '../../../../shared/external-account-bridge'
 import {
   AccountsUnsubscribeParams,
   AddClaudeFromConfigDirParams,
@@ -25,6 +26,16 @@ let accountsSubscriptionSeq = 0
 // `orca account add` CLI can register accounts on a headless host; it is gated
 // to the local runtime connection, never a mobile device token. See #1438.
 export const ACCOUNT_METHODS = [
+  defineMethod({
+    name: 'accounts.bridge',
+    params: ExternalAccountBridgeParams,
+    handler: async (params, { runtime, clientKind }) => {
+      if (clientKind !== undefined) {
+        throw new Error('Credential bridging is only available through the local Orca host socket.')
+      }
+      return runtime.bridgeAccount(params)
+    }
+  }),
   defineMethod({
     name: 'accounts.list',
     params: ListAccountsParams,

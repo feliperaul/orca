@@ -119,6 +119,7 @@ export class ClaudeAccountSelection {
     const settings = this.store.getSettings()
     return {
       accounts: settings.claudeManagedAccounts
+        .filter((account) => !account.externalCredentialSource?.retired)
         .map(toClaudeAccountSummary)
         .sort((a, b) => b.updatedAt - a.updatedAt),
       activeAccountId: normalizeClaudeRuntimeSelection(settings).host,
@@ -130,7 +131,7 @@ export class ClaudeAccountSelection {
     const account = this.store
       .getSettings()
       .claudeManagedAccounts.find((entry) => entry.id === accountId)
-    if (!account) {
+    if (!account || account.externalCredentialSource?.retired) {
       throw new Error('That Claude account no longer exists.')
     }
     return account

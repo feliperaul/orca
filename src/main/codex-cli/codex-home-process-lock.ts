@@ -1,3 +1,4 @@
+import { beginExternalAccountLaunch } from '../external-account-refresh-reservation'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { normalizeRuntimePathForComparison } from '../../shared/cross-platform-path'
@@ -42,7 +43,14 @@ export function resolveCodexHomeProcessLockKeyForSpawnEnv(
 
 export function withCodexHomeProcessLock<T>(lockKey: string, fn: () => Promise<T>): Promise<T> {
   const prior = lockTails.get(lockKey) ?? Promise.resolve()
-  const run = prior.then(fn)
+  const run = prior.then(async () => {
+    const finishLaunch = beginExternalAccountLaunch('codex', null)
+    try {
+      return await fn()
+    } finally {
+      finishLaunch()
+    }
+  })
   // Why: keep the queue alive past a failed run so later entrants still start.
   const tail = run.then(
     () => undefined,

@@ -1,3 +1,4 @@
+import { beginExternalAccountLaunch } from '../../../external-account-refresh-reservation'
 import type { AgentSessionClaimedSpawnResult } from '../../../../shared/agent-session-host-authority'
 import { isTerminalLeafId, makePaneKey } from '../../../../shared/stable-pane-id'
 import { isValidTerminalTabId } from '../../../../shared/terminal-tab-id'
@@ -80,7 +81,13 @@ export async function spawnPtyFromRuntimeController(
       ctx.paneSpawnReservation = reservePaneSpawn(ownerKey)
     }
   }
+  let finishExternalLaunch = () => {}
   try {
+    finishExternalLaunch = beginExternalAccountLaunch(
+      args.command,
+      args.connectionId,
+      args.launchAgent
+    )
     const materializedOrPromise = adoptMaterializedRuntimePtySpawn(ctx)
     const materialized =
       materializedOrPromise instanceof Promise ? await materializedOrPromise : materializedOrPromise
@@ -120,6 +127,7 @@ export async function spawnPtyFromRuntimeController(
     rejectPaneSpawnReservation(ctx.paneSpawnReservationKey, ctx.paneSpawnReservation, err)
     throw err
   } finally {
+    finishExternalLaunch()
     ctx.releaseWorktreeSpawn?.()
     ctx.finishTerminalInstall()
   }

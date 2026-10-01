@@ -1,3 +1,4 @@
+import { readClaudeBridgeSnapshot } from './claude-managed-bridge-read'
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve, sep } from 'node:path'
 import { parseWslUncPath } from '../../shared/wsl-paths'
@@ -108,16 +109,24 @@ export class ClaudeManagedAuthStorage {
     }
   }
 
+  async readBridgeSnapshot(
+    accountId: string,
+    managedAuthPath: string
+  ): Promise<ClaudeManagedAuthSnapshot> {
+    return readClaudeBridgeSnapshot(accountId, await this.assertOwned(managedAuthPath, accountId))
+  }
+
   async restoreCredentials(
     accountId: string,
     managedAuthPath: string,
-    snapshot: ClaudeManagedAuthSnapshot
+    snapshot: ClaudeManagedAuthSnapshot,
+    strict = false
   ): Promise<void> {
     const trustedPath = await this.assertOwned(managedAuthPath, accountId)
     if (process.platform === 'darwin') {
       await (snapshot.credentialsJson !== null
         ? writeManagedClaudeKeychainCredentials(accountId, snapshot.credentialsJson)
-        : deleteManagedClaudeKeychainCredentials(accountId))
+        : deleteManagedClaudeKeychainCredentials(accountId, strict))
     } else if (snapshot.credentialsJson !== null) {
       writeClaudeManagedAuthFile(trustedPath, '.credentials.json', snapshot.credentialsJson)
     } else {

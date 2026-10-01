@@ -1,3 +1,4 @@
+import { assertExternalAccountCommandAllowed } from '../../../external-account-refresh-reservation'
 import { inheritOmpLaunchEnvironment } from '../host-env/omp-launch-environment'
 import { getAppEnvironment } from '../../../../shared/app-environment'
 import type { PtySpawnResult } from '../../../providers/types'
@@ -69,6 +70,7 @@ export async function prepareRuntimePtySpawn(
   }
   ctx.isClaudeLaunch =
     !ctx.preAdoptedStablePane && !args.connectionId && isClaudeLaunchCommand(args.command)
+  assertExternalAccountCommandAllowed(ctx.args.command, ctx.args.connectionId)
   if (ctx.isClaudeLaunch && isClaudeAuthSwitchInProgress()) {
     throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
   }
@@ -149,6 +151,7 @@ export async function prepareRuntimePtySpawn(
     ctx.isClaudeLaunch && ctx.deps.prepareClaudeAuth
       ? await ctx.deps.prepareClaudeAuth(ctx.codexSelectionTarget)
       : null
+  assertExternalAccountCommandAllowed(ctx.args.command, ctx.args.connectionId)
   if (ctx.isClaudeLaunch && isClaudeAuthSwitchInProgress()) {
     throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
   }

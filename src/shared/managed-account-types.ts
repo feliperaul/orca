@@ -1,4 +1,7 @@
+import type { ExternalAccountBinding } from './external-account-bridge'
+
 export type CodexManagedAccount = {
+  externalCredentialSource?: ExternalAccountBinding
   id: string
   email: string
   managedHomePath: string
@@ -56,6 +59,7 @@ export type CodexManagedAccountRuntimeSelection = {
 }
 
 export type ClaudeManagedAccount = {
+  externalCredentialSource?: ExternalAccountBinding
   id: string
   email: string
   managedAuthPath: string

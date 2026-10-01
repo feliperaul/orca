@@ -1,3 +1,4 @@
+import { assertExternalAccountLaunchAllowed } from '../external-account-refresh-reservation'
 import type { Store } from '../persistence'
 import {
   getSelectedClaudeAccountIdForTarget,
@@ -18,6 +19,7 @@ export class ClaudeRuntimeAuthService extends ClaudeRuntimeAuthSync {
   async prepareForClaudeLaunch(
     target?: ClaudeAccountSelectionTarget
   ): Promise<ClaudeRuntimeAuthPreparation> {
+    assertExternalAccountLaunchAllowed('claude')
     const effectiveTarget = target ?? this.getDefaultAccountSelectionTarget()
     await this.syncForCurrentSelection(effectiveTarget)
     return this.getPreparation(effectiveTarget)
