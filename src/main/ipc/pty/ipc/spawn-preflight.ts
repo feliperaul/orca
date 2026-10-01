@@ -1,3 +1,4 @@
+import { assertExternalAccountCommandAllowed } from '../../../external-account-refresh-reservation'
 import {
   isWslShellName,
   resolveLocalWindowsTerminalRuntimeOptions
@@ -193,6 +194,7 @@ export async function preparePtyIpcSpawnPreflight(ctx: PtyIpcSpawnState): Promis
   }
   ctx.isClaudeLaunch =
     !ctx.preAdoptedStablePane && !args.connectionId && isClaudeLaunchCommand(args.command)
+  assertExternalAccountCommandAllowed(ctx.args.command, ctx.args.connectionId)
   if (ctx.isClaudeLaunch && isClaudeAuthSwitchInProgress()) {
     throw new Error(CLAUDE_AUTH_SWITCH_IN_PROGRESS_MESSAGE)
   }

@@ -1,4 +1,10 @@
+import { assertExternalAccountLaunchAllowed } from '../external-account-refresh-reservation'
 import { execFileSync, spawn } from 'node:child_process'
+import type {
+  ExternalAccountStorageRequest,
+  ExternalAccountBridgeResult
+} from '../../shared/external-account-bridge'
+import { CodexExternalAccountBridge } from './codex-external-account-bridge'
 import type { WindowsHostInteractiveLoginSpawn } from '../../shared/windows-interactive-login-spawn'
 import type {
   CodexManagedAccount,
@@ -90,6 +96,7 @@ export class CodexAccountService {
   private readonly resetCredits: CodexResetCreditCoordinator
   private readonly selection: CodexAccountSelection
   private readonly registration: CodexAccountRegistration
+  private readonly externalBridge: CodexExternalAccountBridge
 
   constructor(
     store: Store,
@@ -130,6 +137,14 @@ export class CodexAccountService {
       removeManagedHome: (path, accountId) => this.safeRemoveManagedHome(path, accountId),
       discardResetAttempts: (accountId) => this.resetCredits.discardForRemovedAccount(accountId)
     })
+    this.externalBridge = new CodexExternalAccountBridge(
+      store,
+      this.managedHomePaths,
+      this.managedHomes,
+      runtimeHome,
+      this.selection,
+      this.configMirror
+    )
     this.registration = new CodexAccountRegistration({
       store,
       rateLimits,
@@ -163,7 +178,12 @@ export class CodexAccountService {
     return this.selection.list()
   }
 
+  bridgeAccount(request: ExternalAccountStorageRequest): Promise<ExternalAccountBridgeResult> {
+    return this.serializeMutation(() => this.externalBridge.handle(request))
+  }
+
   async addAccount(target?: CodexAccountAddTarget): Promise<CodexRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('codex')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.registration.add(target))
   }
@@ -221,16 +241,19 @@ export class CodexAccountService {
     accountId: string,
     options?: CodexAccountReauthenticateOptions
   ): Promise<CodexRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('codex')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.registration.reauthenticate(accountId, options))
   }
 
   async removeAccount(accountId: string): Promise<CodexRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('codex')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.remove(accountId))
   }
 
   async selectAccount(accountId: string | null): Promise<CodexRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('codex')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId))
   }
@@ -239,6 +262,7 @@ export class CodexAccountService {
     accountId: string | null,
     target?: CodexAccountSelectionTarget
   ): Promise<CodexRateLimitAccountsState> {
+    assertExternalAccountLaunchAllowed('codex')
     this.supersedePendingLogin()
     return this.serializeMutation(() => this.selection.select(accountId, target))
   }

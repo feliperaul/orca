@@ -1,4 +1,14 @@
+import {
+  reserveExternalAccountRefresh,
+  finishExternalAccountRefresh,
+  externalAccountRefreshOwnerToken,
+  externalAccountReservationMatches
+} from '../external-account-refresh-reservation'
 import type { ClaudeAccountService } from '../claude-accounts/service'
+import type {
+  ExternalAccountBridgeRequest,
+  ExternalAccountBridgeResult
+} from '../../shared/external-account-bridge'
 import type {
   CodexAccountService,
   CodexResetCreditRejectedBeforeProviderReason
@@ -44,6 +54,86 @@ export class RuntimeAccountController {
 
   setServices(services: RuntimeAccountServices): void {
     this.services = services
+  }
+
+  async bridgeAccount(request: ExternalAccountBridgeRequest): Promise<ExternalAccountBridgeResult> {
+    if (process.platform !== 'darwin' && process.platform !== 'linux') {
+      throw new Error('The account bridge supports macOS and native Linux hosts.')
+    }
+    const services = this.requireServices()
+    const service = request.agent === 'claude' ? services.claudeAccounts : services.codexAccounts
+    const readRequest = { operation: 'read' as const, agent: request.agent, key: request.key }
+    if (request.operation === 'read') {
+      return {
+        ...(await service.bridgeAccount(readRequest)),
+        reservationToken: externalAccountRefreshOwnerToken(request.agent, request.key)
+      }
+    }
+    if (request.operation === 'reserveRefresh') {
+      const token = reserveExternalAccountRefresh(
+        request.agent,
+        request.key,
+        true,
+        request.reservationToken
+      )
+      if (!token) {
+        return { ...(await service.bridgeAccount(readRequest)), status: 'busy' }
+      }
+      try {
+        const current = await service.bridgeAccount(readRequest)
+        if (
+          !current.refreshAllowed ||
+          current.digest !== request.expectedDigest ||
+          !current.credentials
+        ) {
+          finishExternalAccountRefresh(request.agent, request.key, token)
+          return {
+            ...current,
+            status: current.digest !== request.expectedDigest ? 'conflict' : 'busy'
+          }
+        }
+        return { ...current, reservationToken: token }
+      } catch (error) {
+        finishExternalAccountRefresh(request.agent, request.key, token)
+        throw error
+      }
+    }
+    if (request.operation === 'finishRefresh') {
+      const released = finishExternalAccountRefresh(
+        request.agent,
+        request.key,
+        request.reservationToken
+      )
+      return { ...(await service.bridgeAccount(readRequest)), status: released ? 'ok' : 'conflict' }
+    }
+    if (
+      !externalAccountReservationMatches(
+        request.agent,
+        request.key,
+        request.operation === 'sync' || request.operation === 'remove'
+          ? request.reservationToken
+          : undefined
+      )
+    ) {
+      return { ...(await service.bridgeAccount(readRequest)), status: 'busy' }
+    }
+    if (
+      !(
+        (request.operation === 'sync' || request.operation === 'remove') &&
+        request.reservationToken
+      )
+    ) {
+      const token = reserveExternalAccountRefresh(request.agent, request.key)
+      if (!token) {
+        return { ...(await service.bridgeAccount(readRequest)), status: 'busy' }
+      }
+      try {
+        return await service.bridgeAccount(request)
+      } finally {
+        finishExternalAccountRefresh(request.agent, request.key, token)
+      }
+    }
+    return service.bridgeAccount(request)
   }
 
   setCommitMessageAgentEnvironment(resolvers: CommitMessageAgentEnvironmentResolvers): void {

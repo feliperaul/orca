@@ -1,3 +1,4 @@
+import { beginExternalAccountLaunch } from '../../../external-account-refresh-reservation'
 import { rejectPaneSpawnReservation, reserveIdlePaneSpawn } from '../pane/spawn-reservation'
 import { ptySizes } from '../delivery/visibility-state'
 import { beginPtyIpcSpawn, resolveEarlyPaneSpawnReservationKey } from './spawn-begin'
@@ -40,7 +41,13 @@ export async function runPtyIpcSpawn(deps: PtySpawnIpcDeps, args: PtySpawnIpcArg
     ctx.paneSpawnReservation = await reserveIdlePaneSpawn(replacedPaneKey)
     ctx.paneSpawnReservationKey = replacedPaneKey
   }
+  let finishExternalLaunch = () => {}
   try {
+    finishExternalLaunch = beginExternalAccountLaunch(
+      args.command,
+      args.connectionId,
+      args.launchAgent
+    )
     if (args.replacesPtyId !== undefined) {
       // Why: stop before resolving the pane owner, so the spawn below finds a dead owner and
       // launches fresh instead of reattaching the process this restart exists to replace.
@@ -88,6 +95,7 @@ export async function runPtyIpcSpawn(deps: PtySpawnIpcDeps, args: PtySpawnIpcArg
     rejectPaneSpawnReservation(ctx.paneSpawnReservationKey, ctx.paneSpawnReservation, err)
     throw err
   } finally {
+    finishExternalLaunch()
     ctx.releaseWorktreeSpawn?.()
     ctx.finishTerminalInstall()
   }

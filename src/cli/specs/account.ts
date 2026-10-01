@@ -7,6 +7,18 @@ import { GLOBAL_FLAGS, type CommandSpec } from '../args'
 // way to manage Claude and Codex accounts.
 export const ACCOUNT_COMMAND_SPECS: CommandSpec[] = [
   {
+    path: ['account', 'bridge'],
+    summary: 'Synchronize an externally managed account through private files on this host',
+    usage: 'orca account bridge --input ABSOLUTE_FILE --output ABSOLUTE_FILE [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'input', 'output'],
+    notes: [
+      'Local host only. Both files must be in private directories (0700); input must be 0600. Output must not exist. Credentials never appear in stdout.'
+    ],
+    examples: [
+      'orca account bridge --input /private/request.json --output /private/response.json --json'
+    ]
+  },
+  {
     path: ['account', 'add'],
     summary: 'Add a managed Claude or Codex account by signing in on this Orca host',
     usage: 'orca account add [--agent claude|codex] [--json]',

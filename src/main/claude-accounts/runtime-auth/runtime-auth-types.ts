@@ -10,6 +10,7 @@ export type ClaudeRuntimeAuthPreparation = {
   stripAuthEnv: boolean
   managedRefreshDeferredByLivePty?: boolean
   provenance: string
+  externallyManaged?: boolean
 }
 
 export type ClaudeSystemDefaultSnapshot = {

@@ -1,4 +1,5 @@
 import type { CodexRateLimitResetOutcome, ProviderRateLimits } from '../../shared/rate-limit-types'
+import { externalAccountUsage, isExternallyManagedHome } from './external-account-usage'
 import { isCodexAuthError } from '../../shared/codex-auth-errors'
 import { buildWslExecArgs, buildWslLoginShellCommand } from '../../shared/wsl-login-shell-command'
 import { parseWslUncPath } from '../../shared/wsl-paths'
@@ -165,6 +166,9 @@ async function fetchBackendUsage(
 export async function fetchCodexRateLimits(
   options?: FetchCodexRateLimitsOptions
 ): Promise<ProviderRateLimits> {
+  if (isExternallyManagedHome(options?.codexHomePath)) {
+    return externalAccountUsage('codex')
+  }
   if (options?.signal?.aborted) {
     return abortedCodexRateLimitResult()
   }

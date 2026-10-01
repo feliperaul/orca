@@ -246,7 +246,7 @@ export class ClaudeRuntimeAuthSync extends ClaudeRuntimeAuthPreparationService {
     if (liveClaudePtys && isOauthTokenExpiring(credentialsJson)) {
       this.managedRefreshDeferredByLivePtyAccountId = activeAccount.id
     }
-    if (!liveClaudePtys) {
+    if (!liveClaudePtys && !activeAccount.externalCredentialSource) {
       const refreshed = await this.refreshManagedAccountTokenIfNeeded(
         activeAccount,
         credentialsJson

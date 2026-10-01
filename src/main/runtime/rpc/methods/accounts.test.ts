@@ -14,6 +14,52 @@ function method(name: string) {
 }
 
 describe('account RPC methods', () => {
+  it('keeps all bridge operations local to the host socket', async () => {
+    const bridge = vi.fn().mockResolvedValue({ status: 'ok' })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this isolated handler only invokes the one mocked runtime method.
+    const runtime = { bridgeAccount: bridge } as unknown as OrcaRuntimeService
+    const handler = method('accounts.bridge')
+    if (isStreamingMethod(handler)) {
+      throw new Error('bridge must be a request method')
+    }
+    const request = { operation: 'read', agent: 'claude', key: 'origin:lease' }
+    for (const clientKind of ['mobile', 'runtime'] as const) {
+      await expect(handler.handler(request, { runtime, clientKind })).rejects.toThrow(
+        /local Orca host socket/
+      )
+    }
+    expect(bridge).not.toHaveBeenCalled()
+    await handler.handler(request, { runtime })
+    expect(bridge).toHaveBeenCalledWith(request)
+  })
+  it.each(['claude', 'codex'] as const)(
+    'sanitizes credential-bearing %s storage errors',
+    async (agent) => {
+      const unsafe = new Error(
+        'Command failed: security -w {"refreshToken":"FAKE_OAUTH_SECRET_SENTINEL"}'
+      )
+      const bridge = vi.fn().mockRejectedValue(unsafe)
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this handler only invokes the mocked bridge method.
+      const runtime = { bridgeAccount: bridge } as unknown as OrcaRuntimeService
+      const handler = method('accounts.bridge')
+      if (isStreamingMethod(handler)) {
+        throw new Error('bridge must be a request method')
+      }
+      const failure = await Promise.resolve(
+        handler.handler({ operation: 'read', agent, key: 'origin:lease' }, { runtime })
+      ).then(
+        () => null,
+        (error: unknown) => error
+      )
+      expect(failure).toBeInstanceOf(Error)
+      if (!(failure instanceof Error)) {
+        throw new Error('missing safe error')
+      }
+      expect(failure.message).toContain('Verify account storage access')
+      expect(failure.message).not.toContain('FAKE_OAUTH_SECRET_SENTINEL')
+      expect(failure.cause).toBeUndefined()
+    }
+  )
   it.each([
     {
       methodName: 'accounts.addClaudeFromConfigDir',

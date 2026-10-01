@@ -92,8 +92,11 @@ export async function writeManagedClaudeKeychainCredentials(
   await writeKeychainPassword(ORCA_CLAUDE_SERVICE, accountId, contents)
 }
 
-export async function deleteManagedClaudeKeychainCredentials(accountId: string): Promise<void> {
-  await deleteKeychainPassword(ORCA_CLAUDE_SERVICE, accountId)
+export async function deleteManagedClaudeKeychainCredentials(
+  accountId: string,
+  strict = false
+): Promise<void> {
+  await deleteKeychainPassword(ORCA_CLAUDE_SERVICE, accountId, { failOnAccessError: strict })
 }
 
 const KEYCHAIN_ACCOUNT_PATTERN = /^[a-zA-Z0-9._-]+$/
