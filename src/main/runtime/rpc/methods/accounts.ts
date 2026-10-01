@@ -33,7 +33,14 @@ export const ACCOUNT_METHODS = [
       if (clientKind !== undefined) {
         throw new Error('Credential bridging is only available through the local Orca host socket.')
       }
-      return runtime.bridgeAccount(params)
+      try {
+        return await runtime.bridgeAccount(params)
+      } catch {
+        // Keychain failures can embed the OAuth JSON passed to security -w.
+        throw new Error(
+          'Could not complete the local account bridge operation. Verify account storage access and retry.'
+        )
+      }
     }
   }),
   defineMethod({

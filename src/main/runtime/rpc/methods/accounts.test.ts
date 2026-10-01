@@ -32,6 +32,34 @@ describe('account RPC methods', () => {
     await handler.handler(request, { runtime })
     expect(bridge).toHaveBeenCalledWith(request)
   })
+  it.each(['claude', 'codex'] as const)(
+    'sanitizes credential-bearing %s storage errors',
+    async (agent) => {
+      const unsafe = new Error(
+        'Command failed: security -w {"refreshToken":"FAKE_OAUTH_SECRET_SENTINEL"}'
+      )
+      const bridge = vi.fn().mockRejectedValue(unsafe)
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this handler only invokes the mocked bridge method.
+      const runtime = { bridgeAccount: bridge } as unknown as OrcaRuntimeService
+      const handler = method('accounts.bridge')
+      if (isStreamingMethod(handler)) {
+        throw new Error('bridge must be a request method')
+      }
+      const failure = await Promise.resolve(
+        handler.handler({ operation: 'read', agent, key: 'origin:lease' }, { runtime })
+      ).then(
+        () => null,
+        (error: unknown) => error
+      )
+      expect(failure).toBeInstanceOf(Error)
+      if (!(failure instanceof Error)) {
+        throw new Error('missing safe error')
+      }
+      expect(failure.message).toContain('Verify account storage access')
+      expect(failure.message).not.toContain('FAKE_OAUTH_SECRET_SENTINEL')
+      expect(failure.cause).toBeUndefined()
+    }
+  )
   it.each([
     {
       methodName: 'accounts.addClaudeFromConfigDir',
